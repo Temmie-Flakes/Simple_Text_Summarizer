@@ -12,4 +12,6 @@ to use:
     - (if there is a text file inserted it will disregard anything in the text box.)
 - scroll to the bottom and hit generate.
 
+all the files get stored locally and can be used offline once ran atleast one time.
+
 yes i know code is jank. ill polish it later
