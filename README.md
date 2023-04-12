@@ -11,3 +11,5 @@ to use:
 - put large amounts of text in the text box -[OR]-drag and drop text files 
     - (if there is a text file inserted it will disregard anything in the text box.)
 - scroll to the bottom and hit generate.
+
+yes i know code is jank. ill polish it later
