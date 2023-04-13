@@ -1,5 +1,7 @@
 A simple implementation and UI of Summary Transformer models. Specifically The pszemraj/led-large-book-summary
 
+am new to git and still learning. i have no clue what im doing. its like moving through quicksand.
+
 quick install (windows):<br />
 ----
 1. download this repo as a zip or using Git.
