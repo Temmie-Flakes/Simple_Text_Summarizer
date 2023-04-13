@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Downloaded models / Huggingface data
+modelsCache/
+flagged/
+
 # Distribution / packaging
 .Python
 build/

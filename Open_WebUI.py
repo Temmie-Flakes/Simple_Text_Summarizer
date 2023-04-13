@@ -1,21 +1,25 @@
 print("importing dependiencies")
 import gradio as gr
+import argparse
 import torch
 import sys
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 
-#when running this file from a batch or similar, checks if any arguments are passed.
-#the argument is the huggingface directory of the model
-if len( sys.argv ) > 1:
-    summaryModel=sys.argv[1]
-else:
-    summaryModel="pszemraj/led-base-book-summary"
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='A Simple Gradio implemation for summary models')
+    parser.add_argument('--model', default='pszemraj/led-base-book-summary',
+                        help='Hugging Face directory of the model to use. format: (userName/modelName)')
+    return parser.parse_args()
+    
+args = parse_args()
+
 print("loading tokenizer")
 
 
-tokenizer = AutoTokenizer.from_pretrained(summaryModel,cache_dir="modelsCache/"+summaryModel.split("/")[1])
+tokenizer = AutoTokenizer.from_pretrained(args.model,cache_dir="modelsCache/"+args.model.split("/")[1])
 print("loading model")
-model = AutoModelForSeq2SeqLM.from_pretrained(summaryModel,cache_dir="modelsCache/"+summaryModel.split("/")[1])
+model = AutoModelForSeq2SeqLM.from_pretrained(args.model,cache_dir="modelsCache/"+args.model.split("/")[1])
 
 print("building summarizer pipeline")
 summarizer = pipeline(
