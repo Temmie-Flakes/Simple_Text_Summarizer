@@ -59,9 +59,19 @@ webUiInteractions=[]
 defaultModelArgsValues=[]
 validModelKwargs=[]
 argumentDict={}
-
 #assigns the gradio interface type for each argument to be able to control them
 #checks python version
+def chooseInterface(argType):
+    match (argType.__name__): 
+        case "int":
+            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
+        case "float":
+            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        case "str":
+            webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        case "bool":
+            webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+
 if sys.version_info[1] == 10:
     #Need to impliment case where continue is called when model.generate.__wrapped__.__annotations__[modelArgs[i]] dosent exist
     for i in range(len(modelArgs)):
@@ -71,17 +81,14 @@ if sys.version_info[1] == 10:
             defaultArg=None
         defaultModelArgsValues.append(defaultArg)
         validModelKwargs.append(modelArgs[i])
+        
     defaultModelArgsValues[validModelKwargs.index("use_cache")]=True
+    
     for i in range(len(validModelKwargs)):
-        #yes i know i could have done a switch statement. suck my ween
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==int:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==float:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==str:
-            webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==bool:
-            webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        argType=(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])
+        chooseInterface(argType)
+            #case _:
+                #print("arg not found")
 else:
     for i in range(len(modelArgs)):
         try:
@@ -96,14 +103,16 @@ else:
         validModelKwargs.append(modelArgs[i])
     defaultModelArgsValues[validModelKwargs.index("use_cache")]=True
     for i in range(len(validModelKwargs)):
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==int:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==float:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==str:
-            webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==bool:
-            webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        argType=type(model.generation_config.__dict__[validModelKwargs[i]])
+        chooseInterface(argType)
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==int:
+            #webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==float:
+            #webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==str:
+            #webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==bool:
+            #webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
 
 #combines the argument names (modelArgs) and the default values from the loaded model into a new dict
 
