@@ -3,6 +3,7 @@ import gradio as gr
 import argparse
 import torch
 import sys
+import base64
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 
 
@@ -13,10 +14,8 @@ def parse_args():
     return parser.parse_args()
     
 args = parse_args()
-
+#dont know if i should use with torch.no_grad(): or not
 print("loading tokenizer")
-
-
 tokenizer = AutoTokenizer.from_pretrained(args.model,cache_dir="modelsCache/"+args.model.split("/")[1])
 print("loading model")
 model = AutoModelForSeq2SeqLM.from_pretrained(args.model,cache_dir="modelsCache/"+args.model.split("/")[1])
@@ -107,9 +106,11 @@ else:
             webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
 
 #combines the argument names (modelArgs) and the default values from the loaded model into a new dict
+
 def largeInputPipeline(batch, newArgs):
     print("using larger batch processing and attention masks")
     print("preparing input...")
+    #with torch.no_grad(): # everything except result
     inputs_dict = tokenizer(batch, padding="max_length", max_length=16384, return_tensors="pt", truncation=True)
     input_ids = inputs_dict.input_ids.to("cuda")
     attention_mask = inputs_dict.attention_mask.to("cuda")
@@ -131,7 +132,10 @@ def generateOutput(wall_of_text,txtFile,isLargeText, *newArgs):
          argumentDict[validModelKwargs[i]] = newArgs[i]
          
     if txtFile:
-        text=((open(txtFile.name, "r",encoding="utf8")).read())
+        #aparently gradio file system dosent retain origional binary information and converts \n into \r\n
+        #also gradio forces temp files for "security" and using binary mode is not supposed to do that acording to the docs 
+        #with default settings it makes acually makes 2 identical temp files. which is stupid. atleast i cut it in half with this method -_-
+        text=txtFile.replace(b'\r\n',b'\n').decode()
         print("|using file|")
     else:
         text=wall_of_text
@@ -142,6 +146,7 @@ def generateOutput(wall_of_text,txtFile,isLargeText, *newArgs):
         result=result[0]
     else:
         print("starting summarization...")
+        #with torch.no_grad():# just result line
         result=summarizer(text,**argumentDict)
         print(result)
         result=result[0]["summary_text"]
@@ -151,7 +156,7 @@ def generateOutput(wall_of_text,txtFile,isLargeText, *newArgs):
 #
 inputTokens = gr.Number(label="input token count")
 outputTokens = gr.Number(label="output token count")
-file=gr.File()
+file=gr.File(type="binary")
 isBigFile=gr.Checkbox(label="check me if large text ~>10,000 words",value=False)
 demo = gr.Interface(fn=generateOutput, inputs=[gr.Textbox(lines=30),file,isBigFile,*webUiInteractions], outputs=[gr.Textbox(),inputTokens,outputTokens])
 
