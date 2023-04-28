@@ -1,21 +1,24 @@
 print("importing dependiencies")
 import gradio as gr
+import argparse
 import torch
 import sys
+import base64
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 
-#when running this file from a batch or similar, checks if any arguments are passed.
-#the argument is the huggingface directory of the model
-if len( sys.argv ) > 1:
-    summaryModel=sys.argv[1]
-else:
-    summaryModel="pszemraj/led-base-book-summary"
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='A Simple Gradio implemation for summary models')
+    parser.add_argument('--model', default='pszemraj/led-base-book-summary',
+                        help='Hugging Face directory of the model to use. format: (userName/modelName)')
+    return parser.parse_args()
+    
+args = parse_args()
+#dont know if i should use with torch.no_grad(): or not
 print("loading tokenizer")
-
-
-tokenizer = AutoTokenizer.from_pretrained(summaryModel,cache_dir="modelsCache/"+summaryModel.split("/")[1])
+tokenizer = AutoTokenizer.from_pretrained(args.model,cache_dir="modelsCache/"+args.model.split("/")[1])
 print("loading model")
-model = AutoModelForSeq2SeqLM.from_pretrained(summaryModel,cache_dir="modelsCache/"+summaryModel.split("/")[1])
+model = AutoModelForSeq2SeqLM.from_pretrained(args.model,cache_dir="modelsCache/"+args.model.split("/")[1])
 
 print("building summarizer pipeline")
 summarizer = pipeline(
@@ -56,9 +59,19 @@ webUiInteractions=[]
 defaultModelArgsValues=[]
 validModelKwargs=[]
 argumentDict={}
-
 #assigns the gradio interface type for each argument to be able to control them
 #checks python version
+def chooseInterface(argType):
+    match (argType.__name__): 
+        case "int":
+            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
+        case "float":
+            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        case "str":
+            webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        case "bool":
+            webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+
 if sys.version_info[1] == 10:
     #Need to impliment case where continue is called when model.generate.__wrapped__.__annotations__[modelArgs[i]] dosent exist
     for i in range(len(modelArgs)):
@@ -68,17 +81,14 @@ if sys.version_info[1] == 10:
             defaultArg=None
         defaultModelArgsValues.append(defaultArg)
         validModelKwargs.append(modelArgs[i])
+        
     defaultModelArgsValues[validModelKwargs.index("use_cache")]=True
+    
     for i in range(len(validModelKwargs)):
-        #yes i know i could have done a switch statement. suck my ween
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==int:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==float:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==str:
-            webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])==bool:
-            webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        argType=(model.generate.__wrapped__.__annotations__[validModelKwargs[i]].__args__[0])
+        chooseInterface(argType)
+            #case _:
+                #print("arg not found")
 else:
     for i in range(len(modelArgs)):
         try:
@@ -93,19 +103,23 @@ else:
         validModelKwargs.append(modelArgs[i])
     defaultModelArgsValues[validModelKwargs.index("use_cache")]=True
     for i in range(len(validModelKwargs)):
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==int:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==float:
-            webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==str:
-            webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
-        if(type(model.generation_config.__dict__[validModelKwargs[i]]))==bool:
-            webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        argType=type(model.generation_config.__dict__[validModelKwargs[i]])
+        chooseInterface(argType)
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==int:
+            #webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i],precision=0))
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==float:
+            #webUiInteractions.append(gr.Number(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==str:
+            #webUiInteractions.append(gr.Textbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
+        #if(type(model.generation_config.__dict__[validModelKwargs[i]]))==bool:
+            #webUiInteractions.append(gr.Checkbox(label=(validModelKwargs[i]),value=defaultModelArgsValues[i]))
 
 #combines the argument names (modelArgs) and the default values from the loaded model into a new dict
+
 def largeInputPipeline(batch, newArgs):
     print("using larger batch processing and attention masks")
     print("preparing input...")
+    #with torch.no_grad(): # everything except result
     inputs_dict = tokenizer(batch, padding="max_length", max_length=16384, return_tensors="pt", truncation=True)
     input_ids = inputs_dict.input_ids.to("cuda")
     attention_mask = inputs_dict.attention_mask.to("cuda")
@@ -127,7 +141,10 @@ def generateOutput(wall_of_text,txtFile,isLargeText, *newArgs):
          argumentDict[validModelKwargs[i]] = newArgs[i]
          
     if txtFile:
-        text=((open(txtFile.name, "r",encoding="utf8")).read())
+        #aparently gradio file system dosent retain origional binary information and converts \n into \r\n
+        #also gradio forces temp files for "security" and using binary mode is not supposed to do that acording to the docs 
+        #with default settings it makes acually makes 2 identical temp files. which is stupid. atleast i cut it in half with this method -_-
+        text=txtFile.replace(b'\r\n',b'\n').decode()
         print("|using file|")
     else:
         text=wall_of_text
@@ -138,6 +155,7 @@ def generateOutput(wall_of_text,txtFile,isLargeText, *newArgs):
         result=result[0]
     else:
         print("starting summarization...")
+        #with torch.no_grad():# just result line
         result=summarizer(text,**argumentDict)
         print(result)
         result=result[0]["summary_text"]
@@ -147,7 +165,7 @@ def generateOutput(wall_of_text,txtFile,isLargeText, *newArgs):
 #
 inputTokens = gr.Number(label="input token count")
 outputTokens = gr.Number(label="output token count")
-file=gr.File()
+file=gr.File(type="binary")
 isBigFile=gr.Checkbox(label="check me if large text ~>10,000 words",value=False)
 demo = gr.Interface(fn=generateOutput, inputs=[gr.Textbox(lines=30),file,isBigFile,*webUiInteractions], outputs=[gr.Textbox(),inputTokens,outputTokens])
 

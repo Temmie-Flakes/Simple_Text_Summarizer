@@ -24,7 +24,7 @@ yes i know code is jank. ill polish it later
 <br />
 
 theoretically you can import summary and text-to-text models by passing the python file with the name of the huggingface repo <br />
-you can edit the `venv\Scripts\python.exe Open_WebUI.py [hugging face repo name]` line in the batch file. look at `RunLargeModel.bat` for example.<br />
+you can edit the `venv\Scripts\python.exe Open_WebUI.py --model [hugging face repo name]` line in the batch file. look at `RunLargeModel.bat` for example.<br />
 *this feature is untested*
 
 
